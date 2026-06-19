@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ataway Marketing UTM Generator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --primary: #4F46E5; --primary-dark: #3730A3; --primary-light: #EEF2FF;
+      --gray-50: #F9FAFB; --gray-100: #F3F4F6; --gray-200: #E5E7EB;
+      --gray-300: #D1D5DB; --gray-400: #9CA3AF; --gray-500: #6B7280;
+      --gray-700: #374151; --gray-900: #111827;
+      --green: #059669; --green-light: #ECFDF5;
+      --red: #DC2626; --radius: 8px;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif; background: var(--gray-50); color: var(--gray-900); min-height: 100vh; font-size: 14px; }
+
+    /* Header */
+    .header { background: var(--primary); color: white; padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
+    .header h1 { font-size: 18px; font-weight: 800; }
+    .header p  { font-size: 11px; opacity: .65; margin-top: 2px; }
+
+    .container { max-width: 740px; margin: 24px auto; padding: 0 16px 48px; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 4px; background: white; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 4px; margin-bottom: 20px; }
+    .tab { flex: 1; padding: 9px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 700; background: transparent; color: var(--gray-500); transition: all .15s; }
+    .tab.active { background: var(--primary); color: white; }
+
+    /* Card */
+    .card { background: white; border: 1px solid var(--gray-200); border-radius: 12px; padding: 22px 24px; margin-bottom: 16px; }
+    .card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--gray-400); margin-bottom: 20px; }
+
+    /* Form */
+    .form-group { margin-bottom: 16px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    /* Field label */
+    .field-label { display: flex; align-items: center; gap: 5px; margin-bottom: 6px; }
+    .label-main { font-size: 13px; font-weight: 700; color: var(--gray-900); }
+    .badge { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 4px; margin-left: auto; }
+    .badge-req { background: #FEE2E2; color: #991B1B; }
+    .badge-opt { background: var(--gray-100); color: var(--gray-400); }
+    .auto-tag { font-size: 10px; font-weight: 600; color: var(--green); background: var(--green-light); padding: 1px 7px; border-radius: 4px; }
+
+    /* Tooltip */
+    .tip-wrap { position: relative; display: inline-flex; align-items: center; }
+    .tip-icon { width: 15px; height: 15px; border-radius: 50%; background: var(--gray-200); color: var(--gray-500); font-size: 10px; font-style: italic; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; cursor: help; user-select: none; flex-shrink: 0; }
+    .tip-box { display: none; position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: var(--gray-900); color: white; padding: 10px 13px; border-radius: 8px; font-size: 12px; width: 270px; z-index: 300; pointer-events: none; line-height: 1.7; font-weight: 400; text-transform: none; letter-spacing: 0; white-space: normal; box-shadow: 0 4px 16px rgba(0,0,0,.3); }
+    .tip-box::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--gray-900); }
+    .tip-wrap:hover .tip-box { display: block; }
+    .tip-ja { color: #9CA3AF; display: block; font-size: 11px; margin-top: 2px; padding-left: 8px; }
+
+    /* Inputs */
+    input[type=text], input[type=url], select { width: 100%; padding: 9px 12px; border: 1.5px solid var(--gray-200); border-radius: var(--radius); font-size: 14px; color: var(--gray-900); background: white; transition: border-color .15s, box-shadow .15s; -webkit-appearance: none; }
+    select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 34px; }
+    input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,.1); }
+    input::placeholder { color: var(--gray-300); }
+    input[readonly] { background: var(--gray-50); color: var(--gray-500); cursor: default; }
+
+    /* ── Campaign custom dropdown ── */
+    .camp-wrap { position: relative; }
+
+    .camp-trigger {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 12px; border: 1.5px solid var(--gray-200); border-radius: var(--radius);
+      cursor: pointer; background: white; transition: border-color .15s, box-shadow .15s;
+      font-size: 14px; user-select: none;
+    }
+    .camp-trigger:hover { border-color: var(--gray-300); }
+    .camp-trigger.open  { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,.1); }
+    .camp-display       { color: var(--gray-300); }
+    .camp-display.selected { color: var(--gray-900); }
+
+    .camp-menu {
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+      background: white; border: 1.5px solid var(--gray-200); border-radius: var(--radius);
+      box-shadow: 0 4px 20px rgba(0,0,0,.12); z-index: 200; overflow: hidden;
+    }
+
+    .camp-group-label {
+      font-size: 10px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--gray-400);
+      padding: 10px 12px 4px;
+    }
+    .camp-group-label.is-custom { padding-top: 12px; }
+
+    .camp-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 14px; cursor: pointer; font-size: 14px; color: var(--gray-900);
+      transition: background .1s;
+    }
+    .camp-item:hover { background: var(--gray-50); }
+    .camp-item.is-selected { color: var(--primary); font-weight: 600; }
+
+    .camp-remove {
+      background: none; border: none; cursor: pointer; color: var(--gray-300);
+      font-size: 15px; line-height: 1; padding: 0 2px; transition: color .15s; flex-shrink: 0;
+    }
+    .camp-remove:hover { color: var(--red); }
+
+    .camp-divider { border-top: 1px solid var(--gray-100); margin: 4px 0; }
+
+    .camp-custom-area { display: flex; gap: 6px; padding: 6px 12px 12px; }
+    .camp-custom-area input { flex: 1; padding: 7px 10px; font-size: 13px; border: 1.5px solid var(--gray-200); border-radius: 6px; }
+    .camp-custom-area input:focus { outline: none; border-color: var(--primary); }
+    .camp-apply { padding: 7px 12px; background: var(--primary); color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+    .camp-apply:hover { background: var(--primary-dark); }
+
+    /* Favorites prompt */
+    .fav-prompt {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      margin-top: 8px; padding: 9px 12px;
+      background: var(--primary-light); border: 1px solid #C7D2FE;
+      border-radius: var(--radius); font-size: 13px; color: var(--primary-dark);
+    }
+    .fav-prompt span { flex: 1; }
+    .fav-yes { padding: 4px 12px; background: var(--primary); color: white; border: none; border-radius: 5px; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .fav-no  { padding: 4px 12px; background: white; color: var(--gray-500); border: 1.5px solid var(--gray-200); border-radius: 5px; font-size: 12px; font-weight: 600; cursor: pointer; }
+
+    /* Content combo row */
+    .combo-row { display: flex; align-items: center; gap: 8px; }
+    .combo-row select { flex: 1.4; }
+    .combo-row .sep { font-size: 18px; font-weight: 700; color: var(--gray-300); flex-shrink: 0; }
+    .combo-row input { flex: 1; min-width: 0; }
+    .content-preview { margin-top: 6px; font-size: 12px; color: var(--gray-400); }
+    .content-preview code { font-family: 'Menlo','Consolas',monospace; background: var(--gray-100); padding: 1px 6px; border-radius: 4px; color: var(--primary); font-weight: 700; }
+
+    /* Buttons */
+    .btn-primary { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 13px; background: var(--primary); color: white; border: none; border-radius: var(--radius); font-size: 15px; font-weight: 700; cursor: pointer; transition: background .15s; margin-top: 8px; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-ghost { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background: white; color: var(--gray-700); border: 1.5px solid var(--gray-200); border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; white-space: nowrap; }
+    .btn-ghost:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+    /* Result */
+    .result-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--gray-400); margin-bottom: 6px; }
+    .url-box { background: var(--gray-50); border: 1.5px solid var(--gray-200); border-radius: var(--radius); padding: 12px 14px; font-family: 'Menlo','Consolas',monospace; font-size: 12px; word-break: break-all; color: var(--gray-700); line-height: 1.65; }
+
+    /* Auto-saved badge */
+    .saved-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--green); font-weight: 600; padding: 4px 10px; background: var(--green-light); border-radius: 4px; }
+
+    /* QR */
+    .qr-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--gray-100); }
+    .qr-dl { font-size: 12px; color: var(--primary); text-decoration: none; font-weight: 600; }
+    .qr-dl:hover { text-decoration: underline; }
+
+    /* History */
+    .hist-topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .hist-count { font-size: 12px; color: var(--gray-400); }
+    .hist-note { font-size: 12px; color: var(--gray-500); background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 6px; padding: 9px 12px; margin-bottom: 14px; line-height: 1.6; }
+    .search-input { width: 100%; padding: 9px 12px 9px 36px; border: 1.5px solid var(--gray-200); border-radius: var(--radius); font-size: 13px; margin-bottom: 14px; background: var(--gray-50) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat 12px center; }
+    .search-input:focus { outline: none; border-color: var(--primary); }
+
+    .hist-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .hist-table th { text-align: left; padding: 9px 12px; background: var(--gray-50); border-bottom: 2px solid var(--gray-200); font-size: 11px; font-weight: 700; color: var(--gray-500); text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
+    .hist-table td { padding: 10px 12px; border-bottom: 1px solid var(--gray-100); vertical-align: middle; }
+    .hist-table tr:last-child td { border-bottom: none; }
+    .hist-table tr:hover td { background: var(--gray-50); }
+
+    .src-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+    .s-google    { background: #FEF3C7; color: #92400E; }
+    .s-facebook  { background: #DBEAFE; color: #1E40AF; }
+    .s-instagram { background: #FCE7F3; color: #9D174D; }
+    .s-linkedin  { background: #DBEAFE; color: #1E3A5F; }
+    .s-line      { background: #D1FAE5; color: #065F46; }
+    .s-newsletter{ background: #FEE2E2; color: #991B1B; }
+    .s-x         { background: #F3F4F6; color: #111827; }
+    .s-partner   { background: #EDE9FE; color: #4C1D95; }
+    .s-other     { background: var(--gray-100); color: var(--gray-700); }
+
+    .copy-cell { color: var(--primary); cursor: pointer; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; display: block; }
+    .copy-cell:hover { text-decoration: underline; }
+    .del-btn { background: none; border: none; cursor: pointer; color: var(--gray-300); font-size: 16px; padding: 2px 6px; border-radius: 4px; line-height: 1; transition: color .15s; }
+    .del-btn:hover { color: var(--red); }
+    .hist-empty { text-align: center; padding: 40px 0; color: var(--gray-400); }
+    .hist-empty-icon { font-size: 32px; margin-bottom: 8px; }
+
+    /* Toast */
+    .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(12px); background: var(--gray-900); color: white; padding: 11px 22px; border-radius: 999px; font-size: 13px; font-weight: 500; opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; z-index: 999; white-space: nowrap; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid rgba(255,255,255,.35); border-top-color: white; border-radius: 50%; animation: spin .6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .hidden { display: none !important; }
+    @media (max-width: 520px) { .form-row { grid-template-columns: 1fr; } .header h1 { font-size: 15px; } }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+  <div>
+    <h1>Ataway Marketing UTM Generator</h1>
+    <p>Campaign URL Builder · キャンペーンURL管理ツール · ataway-cm.jp</p>
+  </div>
+</div>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('gen')">🔗  Build URL</button>
+    <button class="tab"        onclick="switchTab('hist')"><div>📋 History<div style="font-size:10px;font-weight:500;opacity:.7;margin-top:1px">履歴</div></div></button>
+  </div>
+
+  <!-- ══ BUILD URL ══ -->
+  <div id="tab-gen">
+    <div class="card">
+      <div class="card-title">Campaign Parameters<div style="font-size:10px;font-weight:600;color:var(--gray-300);margin-top:2px;text-transform:none;letter-spacing:0">キャンペーンパラメータ</div></div>
+
+      <!-- Destination URL -->
+      <div class="form-group">
+        <div class="field-label">
+          <span class="label-main">Destination URL</span>
+          <span class="tip-wrap">
+            <span class="tip-icon">i</span>
+            <span class="tip-box">The page you want to send users to — a landing page, blog post, or any page on ataway-cm.jp.<br><span class="tip-ja">リンク先のページURL（LP・ブログ・ウェブサイト等）</span></span>
+          </span>
+          <span class="badge badge-req">Required</span>
+        </div>
+        <input type="url" id="originalUrl" placeholder="https://ataway-cm.jp/..." autocomplete="off">
+      </div>
+
+      <!-- Source + Medium -->
+      <div class="form-row">
+        <div class="form-group" style="margin:0">
+          <div class="field-label">
+            <span class="label-main">utm_source</span>
+            <span class="tip-wrap">
+              <span class="tip-icon">i</span>
+              <span class="tip-box">The platform sending traffic to you.<br><span class="tip-ja">トラフィックの流入元（例：facebook, linkedin）</span></span>
+            </span>
+            <span class="badge badge-req">Required</span>
+          </div>
+          <select id="source" onchange="onSourceChange()">
+            <option value="">— Select source —</option>
+            <option value="google">Google</option>
+            <option value="facebook">Facebook</option>
+            <option value="instagram">Instagram</option>
+            <option value="x">X (Twitter)</option>
+            <option value="linkedin">LinkedIn</option>
+            <option value="line">LINE</option>
+            <option value="newsletter">Newsletter</option>
+            <option value="partner_name">Partner</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin:0">
+          <div class="field-label">
+            <span class="label-main">utm_medium</span>
+            <span class="tip-wrap">
+              <span class="tip-icon">i</span>
+              <span class="tip-box">
+                · <strong>social</strong> = organic post <span class="tip-ja">有機投稿</span><br>
+                · <strong>cpc</strong> = paid ad <span class="tip-ja">有料広告</span><br>
+                · <strong>email</strong> = newsletter <span class="tip-ja">メール配信</span><br>
+                · <strong>partner</strong> = referral <span class="tip-ja">パートナー紹介</span>
+              </span>
+            </span>
+            <span id="medium-auto" class="auto-tag hidden">✓ Auto</span>
+            <span class="badge badge-req">Required</span>
+          </div>
+          <input  type="text" id="mediumVal" placeholder="— select source first —" readonly>
+          <select id="mediumSel" class="hidden"></select>
+        </div>
+      </div>
+
+      <!-- Campaign -->
+      <div class="form-group" style="margin-top:16px">
+        <div class="field-label">
+          <span class="label-main">utm_campaign</span>
+          <span class="tip-wrap">
+            <span class="tip-icon">i</span>
+            <span class="tip-box">The name of the campaign. Use consistent names across the team.<br><span class="tip-ja">キャンペーン名（チームで統一した命名規則を使用）</span></span>
+          </span>
+          <span class="badge badge-req">Required</span>
+        </div>
+
+        <!-- Custom dropdown -->
+        <div class="camp-wrap" id="campWrap">
+          <div class="camp-trigger" id="campTrigger" onclick="toggleCampMenu(event)">
+            <span class="camp-display" id="campDisplay">— Select campaign —</span>
+            <svg width="12" height="12" viewBox="0 0 12 12"><path fill="#9CA3AF" d="M6 8L1 3h10z"/></svg>
+          </div>
+          <div class="camp-menu hidden" id="campMenu">
+            <div class="camp-group-label">EVERGREEN</div>
+            <div class="camp-item" id="item-always_on" onclick="pickCampaign('always_on')">always_on</div>
+            <div id="favGroup" class="hidden">
+              <div class="camp-group-label">FAVORITES</div>
+              <div id="favList"></div>
+            </div>
+            <div class="camp-divider"></div>
+            <div class="camp-group-label is-custom">CUSTOM</div>
+            <div class="camp-custom-area">
+              <input type="text" id="campInput" placeholder="Type campaign name…"
+                     onkeydown="campInputKey(event)" onclick="event.stopPropagation()">
+              <button class="camp-apply" onclick="applyCampaign()">Apply</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Save to favorites prompt -->
+        <div class="fav-prompt hidden" id="favPrompt">
+          <span>Add "<strong id="favName"></strong>" to Favorites?</span>
+          <div style="display:flex;gap:6px;margin-left:auto">
+            <button class="fav-yes" onclick="confirmFav(true)">Add ✓</button>
+            <button class="fav-no"  onclick="confirmFav(false)">Skip</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="form-group">
+        <div class="field-label">
+          <span class="label-main">utm_content</span>
+          <span class="tip-wrap">
+            <span class="tip-icon">i</span>
+            <span class="tip-box">Identifies the specific placement. Format: <strong>placement_MMDD</strong><br>e.g. <code style="color:#818CF8;background:rgba(129,140,248,.15);padding:0 4px;border-radius:3px">post_0515</code> = post on May 15<br><span class="tip-ja">版位と日付を組み合わせて識別（例：post_0515）</span></span>
+          </span>
+          <span class="badge badge-req">Required</span>
+        </div>
+
+        <div id="content-social" class="hidden">
+          <div class="combo-row">
+            <select id="placementSel" onchange="updatePreview()"></select>
+            <span class="sep">_</span>
+            <input type="text" id="dateStr" placeholder="MMDD" maxlength="6" oninput="updatePreview()">
+          </div>
+          <div style="margin-top:10px">
+            <div class="camp-group-label is-custom">CUSTOM</div>
+            <input type="text" id="placementCustom" placeholder="Type custom placement name…" style="margin-top:4px" oninput="updatePreview()">
+          </div>
+          <p class="content-preview">utm_content → <code id="contentPreview">—</code></p>
+        </div>
+
+        <div id="content-free" class="hidden">
+          <div class="combo-row">
+            <input type="text" id="contentFree" placeholder="e.g. homepage, banner" oninput="updateFreePreview()">
+            <span class="sep">_</span>
+            <input type="text" id="dateFree" placeholder="MMDD" maxlength="6" oninput="updateFreePreview()">
+          </div>
+          <p class="content-preview">utm_content → <code id="contentFreePreview">—</code></p>
+        </div>
+
+        <div id="content-default">
+          <input type="text" placeholder="— select source first —" disabled style="background:var(--gray-50);color:var(--gray-300)">
+        </div>
+      </div>
+
+      <!-- utm_term (Google only) -->
+      <div class="form-group hidden" id="term-group">
+        <div class="field-label">
+          <span class="label-main">utm_term</span>
+          <span class="tip-wrap">
+            <span class="tip-icon">i</span>
+            <span class="tip-box">The paid keyword that triggered the Google Ad. Only use for Google Ads campaigns.<br><span class="tip-ja">広告を表示させたキーワード（Google Ads専用）</span></span>
+          </span>
+          <span class="badge badge-opt">Google Ads only</span>
+        </div>
+        <input type="text" id="term" placeholder="e.g. change management consulting">
+      </div>
+
+      <button class="btn-primary" onclick="generate()">
+        <div style="text-align:center;line-height:1.3">
+          Generate UTM URL
+          <div style="font-size:11px;font-weight:400;opacity:.7;margin-top:2px">URLを生成する</div>
+        </div>
+      </button>
+    </div>
+
+    <!-- Result card -->
+    <div class="card hidden" id="result-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="card-title" style="margin:0">Generated Result<div style="font-size:10px;font-weight:600;color:var(--gray-300);margin-top:2px;text-transform:none;letter-spacing:0">生成結果</div></div>
+        <span class="saved-badge">✓ Auto-saved to History</span>
+      </div>
+
+      <div class="result-label">Full UTM URL</div>
+      <div class="url-box" id="genUrl"></div>
+      <div class="actions">
+        <button class="btn-ghost" onclick="copyEl('genUrl')">📋 Copy URL</button>
+      </div>
+
+      <div class="qr-wrap">
+        <div class="result-label">QR Code</div>
+        <img id="qrImg" src="" alt="QR Code" width="160" height="160" style="border:1px solid var(--gray-200);border-radius:var(--radius)"
+             onerror="this.style.display='none';document.getElementById('qrFallback').style.display='block'">
+        <div id="qrFallback" style="display:none;text-align:center;padding:16px;border:1px dashed var(--gray-200);border-radius:var(--radius);width:160px">
+          <div style="font-size:28px;margin-bottom:6px">🚫</div>
+          <div style="font-size:11px;color:var(--gray-400);line-height:1.5">QR unavailable<br>（ネットワーク制限）</div>
+        </div>
+        <a id="qrDl" href="" download="qrcode.png" class="qr-dl">⬇ Download QR Code</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ HISTORY ══ -->
+  <div id="tab-hist" class="hidden">
+    <div class="card">
+      <div class="hist-topbar">
+        <div class="card-title" style="margin:0">History<div style="font-size:10px;font-weight:600;color:var(--gray-300);margin-top:2px;text-transform:none;letter-spacing:0">履歴</div></div>
+        <span id="hist-count" class="hist-count"></span>
+      </div>
+      <div class="hist-note">
+        📌 Every URL you generate is automatically saved here. Click any URL to copy it. Use <strong>×</strong> to delete a record.<br>
+        <span style="color:var(--gray-400)">⚠️ Saved in this browser only. · このブラウザにのみ保存されます。</span>
+      </div>
+      <input class="search-input" type="text" id="searchBox"
+             placeholder="Search URL, campaign, source… · 絞り込み検索"
+             oninput="renderHistory()">
+      <div id="histBody">
+        <div class="hist-empty">
+          <div class="hist-empty-icon">📋</div>
+          No history yet. Generate a URL to get started.<br>
+          <span style="font-size:12px;color:var(--gray-300)">まだ履歴がありません。</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Placement config ──────────────────────────────────────
+var CFG = {
+  google:      { mediums: ['cpc'],           contentType: 'text',   placements: [] },
+  facebook:    { mediums: ['social','cpc'],  contentType: 'social', placements: ['post','story','banner'] },
+  instagram:   { mediums: ['social','cpc'],  contentType: 'social', placements: ['story','profile'] },
+  x:           { mediums: ['social'],        contentType: 'social', placements: ['post'] },
+  linkedin:    { mediums: ['social','cpc'],  contentType: 'social', placements: ['post','banner'] },
+  line:        { mediums: ['social'],        contentType: 'social', placements: ['message','richmenu'] },
+  newsletter:  { mediums: ['email'],         contentType: 'email',  placements: ['hero','banner','cta'] },
+  partner_name:{ mediums: ['partner'],       contentType: 'text',   placements: [] }
+};
+
+var currentUrl   = '';
+var campaignVal  = '';
+var pendingFav   = '';
+
+// Pre-fill date with today MMDD
+(function(){
+  var n = new Date(), p = function(x){ return String(x).padStart(2,'0'); };
+  document.getElementById('dateStr').value = p(n.getMonth()+1) + p(n.getDate());
+})();
+
+// Close camp menu on outside click
+document.addEventListener('click', function(e){
+  var wrap = document.getElementById('campWrap');
+  if (wrap && !wrap.contains(e.target)) closeCampMenu();
+});
+
+// ── Tabs ─────────────────────────────────────────────────
+function switchTab(t) {
+  document.querySelectorAll('.tab').forEach(function(el,i){
+    el.classList.toggle('active',(i===0&&t==='gen')||(i===1&&t==='hist'));
+  });
+  document.getElementById('tab-gen').classList.toggle('hidden',  t!=='gen');
+  document.getElementById('tab-hist').classList.toggle('hidden', t!=='hist');
+  if (t==='hist') renderHistory();
+}
+
+// ── Source cascade ────────────────────────────────────────
+function onSourceChange() {
+  var src = document.getElementById('source').value;
+  var cfg = CFG[src];
+
+  // Reset medium
+  var mv = document.getElementById('mediumVal');
+  var ms = document.getElementById('mediumSel');
+  var at = document.getElementById('medium-auto');
+  mv.value=''; mv.classList.remove('hidden');
+  ms.classList.add('hidden'); at.classList.add('hidden');
+
+  // Reset content
+  showContent('default');
+  document.getElementById('term-group').classList.add('hidden');
+  if (!cfg) return;
+
+  // Medium
+  if (cfg.mediums.length === 1) {
+    mv.value = cfg.mediums[0];
+    at.classList.remove('hidden');
+  } else {
+    ms.innerHTML = cfg.mediums.map(function(m){
+      return '<option value="'+m+'">'+m+'</option>';
+    }).join('');
+    ms.classList.remove('hidden');
+    mv.classList.add('hidden');
+  }
+
+  // Content
+  if (cfg.contentType === 'social' || cfg.contentType === 'email') {
+    showContent('social');
+    var sel = document.getElementById('placementSel');
+    sel.innerHTML = cfg.placements.map(function(p){ return '<option value="'+p+'">'+p+'</option>'; }).join('');
+    document.getElementById('placementCustom').value = '';
+    updatePreview();
+  } else {
+    showContent('free');
+    document.getElementById('contentFree').value = '';
+    var n2=new Date(), p2=function(x){return String(x).padStart(2,'0');};
+    document.getElementById('dateFree').value = p2(n2.getMonth()+1)+p2(n2.getDate());
+    updateFreePreview();
+  }
+
+  if (src === 'google') document.getElementById('term-group').classList.remove('hidden');
+}
+
+function showContent(mode) {
+  document.getElementById('content-social').classList.toggle('hidden',   mode!=='social');
+  document.getElementById('content-free').classList.toggle('hidden',     mode!=='free');
+  document.getElementById('content-default').classList.toggle('hidden',  mode!=='default');
+}
+
+function updateFreePreview() {
+  var txt  = document.getElementById('contentFree').value.trim();
+  var date = document.getElementById('dateFree').value.trim();
+  document.getElementById('contentFreePreview').textContent =
+    txt ? (date ? txt+'_'+date : txt) : '—';
+}
+
+function updatePreview() {
+  var custom = document.getElementById('placementCustom').value.trim();
+  var place  = custom || document.getElementById('placementSel').value;
+  var date  = document.getElementById('dateStr').value.trim();
+  document.getElementById('contentPreview').textContent =
+    place ? (date ? place+'_'+date : place) : '—';
+}
+
+function getMedium() {
+  var ms = document.getElementById('mediumSel');
+  return ms.classList.contains('hidden') ? document.getElementById('mediumVal').value : ms.value;
+}
+
+function getContent() {
+  if (!document.getElementById('content-social').classList.contains('hidden')) {
+    var custom = document.getElementById('placementCustom').value.trim();
+    var place  = custom || document.getElementById('placementSel').value;
+    var date   = document.getElementById('dateStr').value.trim();
+    return place ? (date ? place+'_'+date : place) : '';
+  }
+  if (!document.getElementById('content-free').classList.contains('hidden')) {
+    var txt  = document.getElementById('contentFree').value.trim();
+    var date = document.getElementById('dateFree').value.trim();
+    return txt ? (date ? txt+'_'+date : txt) : '';
+  }
+  return '';
+}
+
+// ── Campaign picker ───────────────────────────────────────
+function toggleCampMenu(e) {
+  e.stopPropagation();
+  var menu = document.getElementById('campMenu');
+  var open = !menu.classList.contains('hidden');
+  if (open) { closeCampMenu(); return; }
+  refreshFavList();
+  menu.classList.remove('hidden');
+  document.getElementById('campTrigger').classList.add('open');
+  setTimeout(function(){ document.getElementById('campInput').focus(); }, 50);
+}
+
+function closeCampMenu() {
+  document.getElementById('campMenu').classList.add('hidden');
+  document.getElementById('campTrigger').classList.remove('open');
+}
+
+function pickCampaign(val) {
+  campaignVal = val;
+  var disp = document.getElementById('campDisplay');
+  disp.textContent = val;
+  disp.classList.add('selected');
+  // Highlight selected item
+  document.querySelectorAll('.camp-item').forEach(function(el){ el.classList.remove('is-selected'); });
+  var el = document.getElementById('item-'+val);
+  if (el) el.classList.add('is-selected');
+  closeCampMenu();
+}
+
+function campInputKey(e) {
+  if (e.key==='Enter') { e.preventDefault(); applyCampaign(); }
+  e.stopPropagation();
+}
+
+function applyCampaign() {
+  var val = document.getElementById('campInput').value.trim();
+  if (!val) return;
+  pickCampaign(val);
+  document.getElementById('campInput').value = '';
+  // Show "save to favorites?" prompt
+  pendingFav = val;
+  document.getElementById('favName').textContent = val;
+  document.getElementById('favPrompt').classList.remove('hidden');
+}
+
+function confirmFav(yes) {
+  document.getElementById('favPrompt').classList.add('hidden');
+  if (yes && pendingFav) {
+    var favs = getFavs();
+    if (!favs.includes(pendingFav)) {
+      favs.push(pendingFav);
+      localStorage.setItem('utm_fav_campaigns', JSON.stringify(favs));
+    }
+  }
+  pendingFav = '';
+}
+
+function getFavs() {
+  try { return JSON.parse(localStorage.getItem('utm_fav_campaigns')||'[]'); } catch(e){ return []; }
+}
+
+function removeFav(name) {
+  var favs = getFavs().filter(function(f){ return f!==name; });
+  localStorage.setItem('utm_fav_campaigns', JSON.stringify(favs));
+  if (campaignVal===name) {
+    campaignVal = '';
+    var disp = document.getElementById('campDisplay');
+    disp.textContent = '— Select campaign —';
+    disp.classList.remove('selected');
+  }
+  refreshFavList();
+}
+
+function refreshFavList() {
+  var favs = getFavs();
+  var fg   = document.getElementById('favGroup');
+  var fl   = document.getElementById('favList');
+  if (!favs.length) { fg.classList.add('hidden'); return; }
+  fg.classList.remove('hidden');
+  fl.innerHTML = favs.map(function(f){
+    return '<div class="camp-item">'
+      +'<span style="cursor:pointer;flex:1" onclick="pickCampaign(\''+escJs(f)+'\')">'+esc(f)+'</span>'
+      +'<button class="camp-remove" onclick="removeFav(\''+escJs(f)+'\');event.stopPropagation()">×</button>'
+      +'</div>';
+  }).join('');
+}
+
+// ── Generate + Auto-save ──────────────────────────────────
+function generate() {
+  var rawUrl   = document.getElementById('originalUrl').value.trim();
+  var source   = document.getElementById('source').value;
+  var medium   = getMedium();
+  var campaign = campaignVal;
+  var content  = getContent();
+  var term     = document.getElementById('term').value.trim();
+
+  if (!rawUrl)   { toast('Please enter a Destination URL');   return; }
+  if (!source)   { toast('Please select utm_source');         return; }
+  if (!medium)   { toast('Please select utm_medium');         return; }
+  if (!campaign) { toast('Please select utm_campaign');       return; }
+  if (source && !content) { toast('Please fill in utm_content'); return; }
+
+  var url;
+  try { url = new URL(rawUrl); } catch(e) { toast('Invalid URL — include https://'); return; }
+
+  url.searchParams.set('utm_source',   source);
+  url.searchParams.set('utm_medium',   medium);
+  url.searchParams.set('utm_campaign', campaign);
+  if (content) url.searchParams.set('utm_content', content);
+  if (term)    url.searchParams.set('utm_term',    term);
+
+  currentUrl = url.toString();
+
+  document.getElementById('genUrl').textContent = currentUrl;
+
+  var qr = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' + encodeURIComponent(currentUrl);
+  document.getElementById('qrImg').src = qr;
+  document.getElementById('qrDl').href = qr;
+
+  var card = document.getElementById('result-card');
+  card.classList.remove('hidden');
+  card.scrollIntoView({behavior:'smooth', block:'nearest'});
+
+  // Auto-save
+  autoSave(source, medium, campaign, content, term);
+}
+
+function autoSave(source, medium, campaign, content, term) {
+  var n = new Date(), p = function(x){ return String(x).padStart(2,'0'); };
+  var ts = n.getFullYear()+'/'+p(n.getMonth()+1)+'/'+p(n.getDate())+' '+p(n.getHours())+':'+p(n.getMinutes());
+  var record = {
+    id: Date.now(), timestamp: ts,
+    originalUrl: document.getElementById('originalUrl').value.trim(),
+    source: source, medium: medium, campaign: campaign, content: content, term: term,
+    generatedUrl: currentUrl
+  };
+  var h = loadRaw(); h.unshift(record);
+  localStorage.setItem('utm_history', JSON.stringify(h));
+}
+
+// ── Copy ─────────────────────────────────────────────────
+function copyText(t) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(t).then(function(){ toast('Copied! · コピーしました'); });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = t; ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); toast('Copied! · コピーしました'); }
+    catch(e) { toast('Copy failed — please copy manually'); }
+    document.body.removeChild(ta);
+  }
+}
+function copyEl(id) { copyText(document.getElementById(id).textContent); }
+
+// ── History ───────────────────────────────────────────────
+function loadRaw() { try { return JSON.parse(localStorage.getItem('utm_history')||'[]'); } catch(e){ return []; } }
+
+function renderHistory() {
+  var all   = loadRaw();
+  var q     = (document.getElementById('searchBox').value||'').toLowerCase();
+  var rows  = q ? all.filter(function(r){ return Object.values(r).some(function(v){ return String(v).toLowerCase().includes(q); }); }) : all;
+  document.getElementById('hist-count').textContent = all.length ? all.length+' records' : '';
+
+  if (!rows.length) {
+    document.getElementById('histBody').innerHTML =
+      '<div class="hist-empty"><div class="hist-empty-icon">'+(all.length?'🔍':'📋')+'</div>'
+      +(all.length ? 'No results found.' : 'No history yet.<br><span style="font-size:12px;color:var(--gray-300)">まだ履歴がありません。</span>')
+      +'</div>';
+    return;
+  }
+
+  var sc = {google:'s-google',facebook:'s-facebook',instagram:'s-instagram',linkedin:'s-linkedin',line:'s-line',newsletter:'s-newsletter',x:'s-x',partner_name:'s-partner'};
+  var html = '<div style="overflow-x:auto"><table class="hist-table"><thead><tr>'
+    +'<th>Date</th><th>Source</th><th>Campaign</th><th>Content</th><th>URL</th><th></th>'
+    +'</tr></thead><tbody>';
+  rows.forEach(function(r){
+    html += '<tr>'
+      +'<td style="white-space:nowrap;color:var(--gray-400);font-size:11px">'+esc(r.timestamp)+'</td>'
+      +'<td><span class="src-badge '+(sc[r.source]||'s-other')+'">'+esc(r.source)+'</span><br>'
+        +'<span style="font-size:11px;color:var(--gray-400)">'+esc(r.medium)+'</span></td>'
+      +'<td style="white-space:nowrap;font-size:12px">'+esc(r.campaign)+'</td>'
+      +'<td style="white-space:nowrap;font-size:12px;color:var(--gray-500)">'+esc(r.content||'—')+'</td>'
+      +'<td><span class="copy-cell" title="'+esc(r.generatedUrl)+'" onclick="copyText(\''+escJs(r.generatedUrl)+'\')">'
+        +trunc(r.generatedUrl,35)+'</span></td>'
+      +'<td><button class="del-btn" onclick="delRecord('+r.id+')">×</button></td>'
+      +'</tr>';
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('histBody').innerHTML = html;
+}
+
+function delRecord(id) {
+  if (!confirm('Delete this record?')) return;
+  localStorage.setItem('utm_history', JSON.stringify(loadRaw().filter(function(r){ return r.id!==id; })));
+  renderHistory(); toast('Deleted · 削除しました');
+}
+
+// ── Helpers ───────────────────────────────────────────────
+function trunc(s,n){ return s.length>n?s.slice(0,n)+'…':s; }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escJs(s){ return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+var _tt;
+function toast(m){ var e=document.getElementById('toast'); e.textContent=m; e.classList.add('show'); clearTimeout(_tt); _tt=setTimeout(function(){ e.classList.remove('show'); },2600); }
+</script>
+</body>
+</html>
