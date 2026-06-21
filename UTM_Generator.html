@@ -168,6 +168,7 @@
     .s-newsletter{ background: #FEE2E2; color: #991B1B; }
     .s-x         { background: #F3F4F6; color: #111827; }
     .s-partner   { background: #EDE9FE; color: #4C1D95; }
+    .s-print     { background: #FEF9C3; color: #713F12; }
     .s-other     { background: var(--gray-100); color: var(--gray-700); }
 
     .copy-cell { color: var(--primary); cursor: pointer; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; display: block; }
@@ -234,12 +235,9 @@
           <select id="source" onchange="onSourceChange()">
             <option value="">— Select source —</option>
             <option value="google">Google</option>
-            <option value="facebook">Facebook</option>
-            <option value="instagram">Instagram</option>
-            <option value="x">X (Twitter)</option>
             <option value="linkedin">LinkedIn</option>
-            <option value="line">LINE</option>
             <option value="newsletter">Newsletter</option>
+            <option value="print">Print</option>
             <option value="partner_name">Partner</option>
           </select>
         </div>
@@ -320,14 +318,26 @@
         </div>
 
         <div id="content-social" class="hidden">
-          <div class="combo-row">
-            <select id="placementSel" onchange="updatePreview()"></select>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="camp-wrap" id="contentWrap" style="flex:1.4;min-width:0">
+              <div class="camp-trigger" id="contentTrigger" onclick="toggleContentMenu(event)">
+                <span class="camp-display" id="contentDisplay">— Select placement —</span>
+                <svg width="12" height="12" viewBox="0 0 12 12"><path fill="#9CA3AF" d="M6 8L1 3h10z"/></svg>
+              </div>
+              <div class="camp-menu hidden" id="contentMenu">
+                <div class="camp-group-label">PLACEMENTS</div>
+                <div id="placementList"></div>
+                <div class="camp-divider"></div>
+                <div class="camp-group-label is-custom">CUSTOM</div>
+                <div class="camp-custom-area">
+                  <input type="text" id="placementCustomInput" placeholder="Type placement name…"
+                         onkeydown="contentInputKey(event)" onclick="event.stopPropagation()">
+                  <button class="camp-apply" onclick="applyCustomPlacement()">Apply</button>
+                </div>
+              </div>
+            </div>
             <span class="sep">_</span>
-            <input type="text" id="dateStr" placeholder="MMDD" maxlength="6" oninput="updatePreview()">
-          </div>
-          <div style="margin-top:10px">
-            <div class="camp-group-label is-custom">CUSTOM</div>
-            <input type="text" id="placementCustom" placeholder="Type custom placement name…" style="margin-top:4px" oninput="updatePreview()">
+            <input type="text" id="dateStr" placeholder="MMDD" maxlength="6" oninput="updatePreview()" style="flex:1;min-width:0">
           </div>
           <p class="content-preview">utm_content → <code id="contentPreview">—</code></p>
         </div>
@@ -424,17 +434,15 @@
 // ── Placement config ──────────────────────────────────────
 var CFG = {
   google:      { mediums: ['cpc'],           contentType: 'text',   placements: [] },
-  facebook:    { mediums: ['social','cpc'],  contentType: 'social', placements: ['post','story','banner'] },
-  instagram:   { mediums: ['social','cpc'],  contentType: 'social', placements: ['story','profile'] },
-  x:           { mediums: ['social'],        contentType: 'social', placements: ['post'] },
   linkedin:    { mediums: ['social','cpc'],  contentType: 'social', placements: ['post','banner'] },
-  line:        { mediums: ['social'],        contentType: 'social', placements: ['message','richmenu'] },
   newsletter:  { mediums: ['email'],         contentType: 'email',  placements: ['hero','banner','cta'] },
+  print:       { mediums: ['print'],         contentType: 'text',   placements: [] },
   partner_name:{ mediums: ['partner'],       contentType: 'text',   placements: [] }
 };
 
 var currentUrl   = '';
 var campaignVal  = '';
+var placementVal = '';
 var pendingFav   = '';
 
 // Pre-fill date with today MMDD
@@ -443,10 +451,12 @@ var pendingFav   = '';
   document.getElementById('dateStr').value = p(n.getMonth()+1) + p(n.getDate());
 })();
 
-// Close camp menu on outside click
+// Close camp/content menus on outside click
 document.addEventListener('click', function(e){
   var wrap = document.getElementById('campWrap');
   if (wrap && !wrap.contains(e.target)) closeCampMenu();
+  var cWrap = document.getElementById('contentWrap');
+  if (cWrap && !cWrap.contains(e.target)) closeContentMenu();
 });
 
 // ── Tabs ─────────────────────────────────────────────────
@@ -473,6 +483,9 @@ function onSourceChange() {
 
   // Reset content
   showContent('default');
+  placementVal = '';
+  var _cd = document.getElementById('contentDisplay');
+  if (_cd) { _cd.textContent = '— Select placement —'; _cd.classList.remove('selected'); }
   document.getElementById('term-group').classList.add('hidden');
   if (!cfg) return;
 
@@ -491,9 +504,9 @@ function onSourceChange() {
   // Content
   if (cfg.contentType === 'social' || cfg.contentType === 'email') {
     showContent('social');
-    var sel = document.getElementById('placementSel');
-    sel.innerHTML = cfg.placements.map(function(p){ return '<option value="'+p+'">'+p+'</option>'; }).join('');
-    document.getElementById('placementCustom').value = '';
+    document.getElementById('placementList').innerHTML = cfg.placements.map(function(p){
+      return '<div class="camp-item" id="pitem-'+p+'" onclick="pickPlacement(\''+p+'\')">'+p+'</div>';
+    }).join('');
     updatePreview();
   } else {
     showContent('free');
@@ -520,11 +533,9 @@ function updateFreePreview() {
 }
 
 function updatePreview() {
-  var custom = document.getElementById('placementCustom').value.trim();
-  var place  = custom || document.getElementById('placementSel').value;
-  var date  = document.getElementById('dateStr').value.trim();
+  var date = document.getElementById('dateStr').value.trim();
   document.getElementById('contentPreview').textContent =
-    place ? (date ? place+'_'+date : place) : '—';
+    placementVal ? (date ? placementVal+'_'+date : placementVal) : '—';
 }
 
 function getMedium() {
@@ -534,10 +545,8 @@ function getMedium() {
 
 function getContent() {
   if (!document.getElementById('content-social').classList.contains('hidden')) {
-    var custom = document.getElementById('placementCustom').value.trim();
-    var place  = custom || document.getElementById('placementSel').value;
-    var date   = document.getElementById('dateStr').value.trim();
-    return place ? (date ? place+'_'+date : place) : '';
+    var date = document.getElementById('dateStr').value.trim();
+    return placementVal ? (date ? placementVal+'_'+date : placementVal) : '';
   }
   if (!document.getElementById('content-free').classList.contains('hidden')) {
     var txt  = document.getElementById('contentFree').value.trim();
@@ -562,6 +571,52 @@ function toggleCampMenu(e) {
 function closeCampMenu() {
   document.getElementById('campMenu').classList.add('hidden');
   document.getElementById('campTrigger').classList.remove('open');
+}
+
+// ── Content picker ────────────────────────────────────────
+function toggleContentMenu(e) {
+  e.stopPropagation();
+  var menu = document.getElementById('contentMenu');
+  var open = !menu.classList.contains('hidden');
+  if (open) { closeContentMenu(); return; }
+  menu.classList.remove('hidden');
+  document.getElementById('contentTrigger').classList.add('open');
+  setTimeout(function(){ document.getElementById('placementCustomInput').focus(); }, 50);
+}
+
+function closeContentMenu() {
+  var menu = document.getElementById('contentMenu');
+  if (menu) menu.classList.add('hidden');
+  var trig = document.getElementById('contentTrigger');
+  if (trig) trig.classList.remove('open');
+}
+
+function pickPlacement(val) {
+  placementVal = val;
+  var disp = document.getElementById('contentDisplay');
+  disp.textContent = val; disp.classList.add('selected');
+  document.querySelectorAll('#placementList .camp-item').forEach(function(el){ el.classList.remove('is-selected'); });
+  var el = document.getElementById('pitem-'+val);
+  if (el) el.classList.add('is-selected');
+  closeContentMenu();
+  updatePreview();
+}
+
+function applyCustomPlacement() {
+  var val = document.getElementById('placementCustomInput').value.trim();
+  if (!val) return;
+  placementVal = val;
+  var disp = document.getElementById('contentDisplay');
+  disp.textContent = val; disp.classList.add('selected');
+  document.querySelectorAll('#placementList .camp-item').forEach(function(el){ el.classList.remove('is-selected'); });
+  document.getElementById('placementCustomInput').value = '';
+  closeContentMenu();
+  updatePreview();
+}
+
+function contentInputKey(e) {
+  if (e.key==='Enter') { e.preventDefault(); applyCustomPlacement(); }
+  e.stopPropagation();
 }
 
 function pickCampaign(val) {
@@ -719,7 +774,7 @@ function renderHistory() {
     return;
   }
 
-  var sc = {google:'s-google',facebook:'s-facebook',instagram:'s-instagram',linkedin:'s-linkedin',line:'s-line',newsletter:'s-newsletter',x:'s-x',partner_name:'s-partner'};
+  var sc = {google:'s-google',facebook:'s-facebook',instagram:'s-instagram',linkedin:'s-linkedin',line:'s-line',newsletter:'s-newsletter',x:'s-x',print:'s-print',partner_name:'s-partner'};
   var html = '<div style="overflow-x:auto"><table class="hist-table"><thead><tr>'
     +'<th>Date</th><th>Source</th><th>Campaign</th><th>Content</th><th>URL</th><th></th>'
     +'</tr></thead><tbody>';
