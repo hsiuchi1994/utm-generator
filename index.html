@@ -838,7 +838,7 @@ function shortenUrl() {
   var btn = document.getElementById('btn-shorten');
   btn.innerHTML = '<span class="spinner"></span> Shortening…';
   btn.disabled = true;
-  fetch('https://is.gd/create.php?format=simple&url=' + encodeURIComponent(currentUrl))
+  fetch('/api/shorten?url=' + encodeURIComponent(currentUrl))
     .then(function(r){ return r.text(); })
     .then(function(short){
       short = short.trim();
